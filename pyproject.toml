@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentlens"
-version = "0.2.0"
+version = "0.3.0"
 description = "Audit trail, authorization, and anomaly detection for AI agents"
 readme = "README.md"
 license = { text = "MIT" }
@@ -43,3 +43,6 @@ Issues   = "https://github.com/kaushikrajiv9-arch/agentlens/issues"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["agentlens*"]
+
+[tool.setuptools.package-data]
+agentlens = ["dashboard/*.html"]

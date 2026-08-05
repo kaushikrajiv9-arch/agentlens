@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgentLens Dashboard</title>
+<style>
+:root {
+  --bg:      #0d1117;
+  --card:    #161b22;
+  --card2:   #1c2128;
+  --border:  #30363d;
+  --text:    #e6edf3;
+  --muted:   #8b949e;
+  --green:   #3fb950;
+  --red:     #f85149;
+  --yellow:  #d29922;
+  --blue:    #58a6ff;
+  --purple:  #bc8cff;
+  --orange:  #db6d28;
+  --indigo:  #6366f1;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;min-height:100vh;}
+
+/* ── Header ── */
+header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--card);position:sticky;top:0;z-index:10;}
+.logo{font-size:15px;font-weight:700;letter-spacing:.4px;}
+.logo span{color:var(--indigo);}
+.header-right{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--muted);}
+#live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;margin-right:4px;}
+#last-updated{font-size:11px;color:var(--muted);}
+
+/* ── Layout ── */
+.main{padding:16px 20px;max-width:1400px;margin:0 auto;}
+
+/* ── Cards ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;}
+
+/* ── KPI row ── */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;}
+@media(max-width:900px){.kpi-row{grid-template-columns:1fr 1fr;}}
+.kpi-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;}
+.kpi-value{font-size:26px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:4px;}
+.green{color:var(--green);}
+.red{color:var(--red);}
+.yellow{color:var(--yellow);}
+.blue{color:var(--blue);}
+.indigo{color:var(--indigo);}
+.muted{color:var(--muted);}
+
+/* ── Two-col ── */
+.row2{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:16px;}
+@media(max-width:1000px){.row2{grid-template-columns:1fr;}}
+
+/* ── Section title ── */
+.section-title{font-size:13px;font-weight:600;margin-bottom:10px;letter-spacing:.3px;}
+
+/* ── Tables ── */
+table{width:100%;border-collapse:collapse;}
+th{text-align:left;padding:6px 10px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);}
+td{padding:7px 10px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--card2);}
+.mono{font-family:'SF Mono','Fira Code',monospace;font-size:11px;}
+
+/* ── Badges ── */
+.badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;}
+.badge-ok      {background:rgba(63,185,80,.15); color:var(--green);}
+.badge-error   {background:rgba(248,81,73,.15); color:var(--red);}
+.badge-blocked {background:rgba(210,153,34,.15);color:var(--yellow);}
+.badge-critical{background:rgba(248,81,73,.2);  color:var(--red);}
+.badge-high    {background:rgba(219,109,40,.2); color:var(--orange);}
+.badge-medium  {background:rgba(210,153,34,.2); color:var(--yellow);}
+.badge-low     {background:rgba(88,166,255,.15);color:var(--blue);}
+
+/* ── Agent bars ── */
+.agent-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);}
+.agent-row:last-child{border-bottom:none;}
+.agent-name{min-width:140px;font-weight:600;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.agent-bar-wrap{flex:1;height:6px;background:var(--card2);border-radius:3px;overflow:hidden;}
+.agent-bar-fill{height:100%;border-radius:3px;background:var(--indigo);}
+.agent-meta{font-size:11px;color:var(--muted);min-width:120px;text-align:right;}
+
+/* ── Runs table ── */
+.run-id{font-family:'SF Mono','Fira Code',monospace;font-size:11px;color:var(--blue);}
+
+/* ── Empty state ── */
+.empty{color:var(--muted);font-size:12px;padding:20px 0;text-align:center;}
+
+/* ── Refresh bar ── */
+.refresh-bar{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-bottom:12px;}
+.refresh-bar label{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px;cursor:pointer;}
+#countdown{font-size:11px;color:var(--muted);}
+button.refresh-btn{background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:4px 10px;font-size:11px;cursor:pointer;}
+button.refresh-btn:hover{background:var(--border);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Agent<span>Lens</span></div>
+  <div class="header-right">
+    <span><span id="live-dot"></span>Live</span>
+    <span id="last-updated">—</span>
+    <button class="refresh-btn" onclick="refresh()">↺ Refresh</button>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- KPI row -->
+  <div class="kpi-row" style="margin-top:16px">
+    <div class="card"><div class="kpi-label">Total Events</div><div class="kpi-value" id="k-total">—</div><div class="kpi-sub" id="k-total-sub"></div></div>
+    <div class="card"><div class="kpi-label">Total Cost</div><div class="kpi-value green" id="k-cost">—</div><div class="kpi-sub" id="k-cost-sub"></div></div>
+    <div class="card"><div class="kpi-label">Total Tokens</div><div class="kpi-value blue" id="k-tokens">—</div><div class="kpi-sub"></div></div>
+    <div class="card"><div class="kpi-label">Errors</div><div class="kpi-value" id="k-errors">—</div><div class="kpi-sub" id="k-err-sub"></div></div>
+    <div class="card"><div class="kpi-label">Anomaly Alerts</div><div class="kpi-value" id="k-alerts">—</div><div class="kpi-sub" id="k-alert-sub"></div></div>
+  </div>
+
+  <!-- Event feed + Anomalies -->
+  <div class="row2">
+
+    <!-- Event feed -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="section-title" style="margin-bottom:0">📋 Live Event Feed</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="f-agent" onchange="refresh()" style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:3px 7px;font-size:11px;">
+            <option value="">All agents</option>
+          </select>
+          <select id="f-status" onchange="refresh()" style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:3px 7px;font-size:11px;">
+            <option value="">All status</option>
+            <option value="ok">ok</option>
+            <option value="error">error</option>
+            <option value="blocked">blocked</option>
+          </select>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table id="events-table">
+          <thead><tr>
+            <th>Time</th><th>Agent</th><th>Action</th><th>Model</th>
+            <th style="text-align:right">Tokens</th>
+            <th style="text-align:right">Cost</th>
+            <th style="text-align:right">ms</th>
+            <th>Status</th>
+          </tr></thead>
+          <tbody id="events-body"><tr><td colspan="8" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Right column: anomalies + agents -->
+    <div style="display:flex;flex-direction:column;gap:12px;">
+
+      <!-- Anomaly alerts -->
+      <div class="card">
+        <div class="section-title">🚨 Anomaly Alerts</div>
+        <div id="anomaly-list"><div class="empty">Loading…</div></div>
+      </div>
+
+      <!-- Agent breakdown -->
+      <div class="card">
+        <div class="section-title">🤖 Agents</div>
+        <div id="agent-list"><div class="empty">Loading…</div></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Sessions/Runs -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="section-title">🔗 Recent Sessions</div>
+    <div style="overflow-x:auto">
+      <table id="runs-table">
+        <thead><tr>
+          <th>Run ID</th><th>Started</th>
+          <th style="text-align:right">Events</th>
+          <th style="text-align:right">Errors</th>
+          <th style="text-align:right">Tokens</th>
+          <th style="text-align:right">Cost</th>
+        </tr></thead>
+        <tbody id="runs-body"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const REFRESH_S = 10;
+let countdown = REFRESH_S;
+let timer;
+
+function fmt_cost(v) {
+  if (v == null || v === 0) return '—';
+  if (v < 0.001) return '$' + (v * 1000).toFixed(4) + 'm';
+  return '$' + v.toFixed(4);
+}
+function fmt_tokens(v) {
+  if (!v) return '—';
+  return v >= 1000 ? (v/1000).toFixed(1) + 'K' : v;
+}
+function fmt_time(ts) {
+  if (!ts) return '—';
+  return new Date(ts).toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
+}
+function badge(status) {
+  return `<span class="badge badge-${status}">${status}</span>`;
+}
+
+async function refresh() {
+  countdown = REFRESH_S;
+  document.getElementById('last-updated').textContent = 'Refreshing…';
+  try {
+    const agentFilter  = document.getElementById('f-agent').value;
+    const statusFilter = document.getElementById('f-status').value;
+
+    const [statsR, eventsR, anomR, agentsR, runsR] = await Promise.all([
+      fetch('/api/stats'),
+      fetch(`/api/events?limit=50${agentFilter ? '&agent='+agentFilter : ''}`),
+      fetch('/api/anomalies?limit=10'),
+      fetch('/api/agents'),
+      fetch('/api/runs'),
+    ]);
+    const [stats, events, anomalies, agents, runs] = await Promise.all([
+      statsR.json(), eventsR.json(), anomR.json(), agentsR.json(), runsR.json()
+    ]);
+
+    // KPIs
+    const errRate = stats.total_events > 0
+      ? ((stats.errors / stats.total_events) * 100).toFixed(1) + '%' : '0%';
+    document.getElementById('k-total').textContent   = stats.total_events.toLocaleString();
+    document.getElementById('k-total-sub').textContent = `${stats.blocked} blocked`;
+    document.getElementById('k-cost').textContent    = fmt_cost(stats.total_cost_usd);
+    document.getElementById('k-tokens').textContent  = fmt_tokens(stats.total_tokens);
+    document.getElementById('k-errors').textContent  = stats.errors;
+    document.getElementById('k-errors').className    = 'kpi-value ' + (stats.errors > 0 ? 'red' : 'green');
+    document.getElementById('k-err-sub').textContent = errRate + ' error rate';
+    document.getElementById('k-alerts').textContent  = stats.anomaly_alerts;
+    document.getElementById('k-alerts').className    = 'kpi-value ' + (stats.anomaly_alerts > 0 ? 'yellow' : 'green');
+
+    // Agent filter dropdown
+    const agentSel = document.getElementById('f-agent');
+    const cur = agentSel.value;
+    agentSel.innerHTML = '<option value="">All agents</option>' +
+      agents.map(a => `<option value="${a.agent_id}"${a.agent_id===cur?' selected':''}>${a.agent_id}</option>`).join('');
+
+    // Event feed
+    let filtered = events;
+    if (statusFilter) filtered = events.filter(e => e.status === statusFilter);
+    document.getElementById('events-body').innerHTML = filtered.length === 0
+      ? `<tr><td colspan="8" class="empty">No events.</td></tr>`
+      : filtered.map(e => `<tr>
+          <td class="muted">${fmt_time(e.ts)}</td>
+          <td style="font-weight:600">${e.agent_id}</td>
+          <td>${e.action}</td>
+          <td class="muted mono">${e.model ? e.model.replace('claude-','').replace('gpt-','') : '—'}</td>
+          <td style="text-align:right" class="muted">${fmt_tokens(e.token_count)}</td>
+          <td style="text-align:right" class="${e.cost_usd > 0 ? 'green' : 'muted'}">${fmt_cost(e.cost_usd)}</td>
+          <td style="text-align:right" class="muted">${e.latency_ms ? e.latency_ms.toFixed(0) : '—'}</td>
+          <td>${badge(e.status)}</td>
+        </tr>`).join('');
+
+    // Anomalies
+    document.getElementById('anomaly-list').innerHTML = anomalies.length === 0
+      ? `<div class="empty">No alerts — all clear.</div>`
+      : anomalies.map(a => `<div style="padding:7px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:flex-start">
+          <span class="badge badge-${a.severity}" style="flex-shrink:0;margin-top:1px">${a.severity}</span>
+          <div>
+            <div style="font-weight:600;font-size:12px">${a.agent_id} → ${a.action}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">${a.reason}</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px">${fmt_time(a.ts)}</div>
+          </div>
+        </div>`).join('');
+
+    // Agents
+    const maxTotal = Math.max(...agents.map(a => a.total), 1);
+    document.getElementById('agent-list').innerHTML = agents.length === 0
+      ? `<div class="empty">No agents yet.</div>`
+      : agents.map(a => `<div class="agent-row">
+          <div class="agent-name">${a.agent_id}</div>
+          <div class="agent-bar-wrap"><div class="agent-bar-fill" style="width:${(a.total/maxTotal*100).toFixed(0)}%"></div></div>
+          <div class="agent-meta">${a.total} calls · ${fmt_cost(a.cost)}</div>
+        </div>`).join('');
+
+    // Runs/Sessions
+    document.getElementById('runs-body').innerHTML = runs.length === 0
+      ? `<tr><td colspan="6" class="empty">No sessions yet. Use agentlens.Session() to group traces.</td></tr>`
+      : runs.map(r => `<tr>
+          <td class="run-id">${r.run_id}</td>
+          <td class="muted">${fmt_time(r.started)}</td>
+          <td style="text-align:right">${r.events}</td>
+          <td style="text-align:right" class="${r.errors > 0 ? 'red' : 'muted'}">${r.errors || 0}</td>
+          <td style="text-align:right" class="muted">${fmt_tokens(r.tokens)}</td>
+          <td style="text-align:right" class="${r.cost > 0 ? 'green' : 'muted'}">${fmt_cost(r.cost)}</td>
+        </tr>`).join('');
+
+    document.getElementById('last-updated').textContent =
+      'Updated ' + new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
+
+  } catch(e) {
+    document.getElementById('last-updated').textContent = 'Error — retrying…';
+  }
+}
+
+// Auto-refresh countdown
+function tick() {
+  countdown--;
+  if (countdown <= 0) {
+    refresh();
+  } else {
+    const el = document.getElementById('last-updated');
+    if (el.textContent.startsWith('Updated')) {
+      el.textContent = el.textContent.split(' · ')[0] + ` · next in ${countdown}s`;
+    }
+  }
+}
+
+refresh();
+timer = setInterval(tick, 1000);
+</script>
+</body>
+</html>

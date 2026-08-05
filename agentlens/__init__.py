@@ -31,5 +31,5 @@ from . import auth
 from . import shield
 from .store import EventStore
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 __all__ = ["trace", "log_event", "configure", "Session", "auth", "shield", "EventStore"]

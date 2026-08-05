@@ -87,6 +87,9 @@ class EventStore:
         with self._conn() as conn:
             conn.execute(
                 """INSERT OR REPLACE INTO events
+                   (event_id, ts, agent_id, action, status, latency_ms,
+                    token_count, input_tokens, output_tokens, cost_usd,
+                    model, run_id, inputs, outputs, error, tags)
                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (e.event_id, e.ts, e.agent_id, e.action, e.status,
                  e.latency_ms, e.token_count, e.input_tokens, e.output_tokens,

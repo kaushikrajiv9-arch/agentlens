@@ -82,6 +82,20 @@ def stats():
 
 
 @main.command()
+@click.option("--port", "-p", default=7755, show_default=True, help="Port to listen on")
+@click.option("--host", default="127.0.0.1", show_default=True)
+@click.option("--db",   default=None, help="Path to events.db (default: ~/.agentlens/events.db)")
+@click.option("--no-browser", is_flag=True, help="Don't open browser automatically")
+def serve(port, host, db, no_browser):
+    """Start the AgentLens web dashboard."""
+    from pathlib import Path
+    from .server import serve as _serve
+    _serve(host=host, port=port,
+           db_path=Path(db) if db else None,
+           open_browser=not no_browser)
+
+
+@main.command()
 @click.argument("output", default="agentlens_export.jsonl")
 @click.option("--run", "-r", default=None, help="Export a specific run_id only")
 def export(output, run):
