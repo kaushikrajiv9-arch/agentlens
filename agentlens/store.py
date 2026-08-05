@@ -9,17 +9,22 @@ DEFAULT_DB = Path.home() / ".agentlens" / "events.db"
 
 _CREATE_EVENTS = """
 CREATE TABLE IF NOT EXISTS events (
-    event_id   TEXT PRIMARY KEY,
-    ts         TEXT NOT NULL,
-    agent_id   TEXT NOT NULL,
-    action     TEXT NOT NULL,
-    status     TEXT NOT NULL,
-    latency_ms REAL,
-    token_count INTEGER,
-    inputs     TEXT,
-    outputs    TEXT,
-    error      TEXT,
-    tags       TEXT
+    event_id      TEXT PRIMARY KEY,
+    ts            TEXT NOT NULL,
+    agent_id      TEXT NOT NULL,
+    action        TEXT NOT NULL,
+    status        TEXT NOT NULL,
+    latency_ms    REAL,
+    token_count   INTEGER,
+    input_tokens  INTEGER,
+    output_tokens INTEGER,
+    cost_usd      REAL,
+    model         TEXT,
+    run_id        TEXT,
+    inputs        TEXT,
+    outputs       TEXT,
+    error         TEXT,
+    tags          TEXT
 );
 """
 
@@ -46,6 +51,14 @@ CREATE TABLE IF NOT EXISTS anomalies (
 );
 """
 
+_MIGRATE_V2 = [
+    "ALTER TABLE events ADD COLUMN input_tokens  INTEGER",
+    "ALTER TABLE events ADD COLUMN output_tokens INTEGER",
+    "ALTER TABLE events ADD COLUMN cost_usd      REAL",
+    "ALTER TABLE events ADD COLUMN model         TEXT",
+    "ALTER TABLE events ADD COLUMN run_id        TEXT",
+]
+
 
 class EventStore:
     def __init__(self, db_path: Path = DEFAULT_DB):
@@ -63,13 +76,21 @@ class EventStore:
             conn.execute(_CREATE_EVENTS)
             conn.execute(_CREATE_AUTH)
             conn.execute(_CREATE_ANOMALIES)
+            # Run migrations safely (ignore "duplicate column" errors)
+            for stmt in _MIGRATE_V2:
+                try:
+                    conn.execute(stmt)
+                except sqlite3.OperationalError:
+                    pass
 
     def save_event(self, e) -> None:
         with self._conn() as conn:
             conn.execute(
-                "INSERT OR REPLACE INTO events VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                """INSERT OR REPLACE INTO events
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (e.event_id, e.ts, e.agent_id, e.action, e.status,
-                 e.latency_ms, e.token_count,
+                 e.latency_ms, e.token_count, e.input_tokens, e.output_tokens,
+                 e.cost_usd, e.model, e.run_id,
                  json.dumps(e.inputs, default=str),
                  json.dumps(e.outputs, default=str),
                  e.error, json.dumps(e.tags)),
@@ -89,12 +110,16 @@ class EventStore:
                 (a.ts, a.agent_id, a.action, a.severity, a.reason),
             )
 
-    def recent_events(self, limit: int = 50, agent_id: Optional[str] = None) -> List[dict]:
-        q = "SELECT * FROM events"
-        params: list = []
+    def recent_events(self, limit: int = 50, agent_id: Optional[str] = None,
+                      run_id: Optional[str] = None) -> List[dict]:
+        q, params = "SELECT * FROM events", []
+        filters = []
         if agent_id:
-            q += " WHERE agent_id = ?"
-            params.append(agent_id)
+            filters.append("agent_id = ?"); params.append(agent_id)
+        if run_id:
+            filters.append("run_id = ?");   params.append(run_id)
+        if filters:
+            q += " WHERE " + " AND ".join(filters)
         q += " ORDER BY ts DESC LIMIT ?"
         params.append(limit)
         with self._conn() as conn:
@@ -108,8 +133,24 @@ class EventStore:
 
     def stats(self) -> dict:
         with self._conn() as conn:
-            total   = conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
-            errors  = conn.execute("SELECT COUNT(*) FROM events WHERE status='error'").fetchone()[0]
-            blocked = conn.execute("SELECT COUNT(*) FROM events WHERE status='blocked'").fetchone()[0]
-            alerts  = conn.execute("SELECT COUNT(*) FROM anomalies").fetchone()[0]
-        return {"total_events": total, "errors": errors, "blocked": blocked, "anomaly_alerts": alerts}
+            total    = conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
+            errors   = conn.execute("SELECT COUNT(*) FROM events WHERE status='error'").fetchone()[0]
+            blocked  = conn.execute("SELECT COUNT(*) FROM events WHERE status='blocked'").fetchone()[0]
+            alerts   = conn.execute("SELECT COUNT(*) FROM anomalies").fetchone()[0]
+            cost_row = conn.execute("SELECT SUM(cost_usd) FROM events").fetchone()[0]
+            tok_row  = conn.execute("SELECT SUM(token_count) FROM events").fetchone()[0]
+        return {
+            "total_events":    total,
+            "errors":          errors,
+            "blocked":         blocked,
+            "anomaly_alerts":  alerts,
+            "total_cost_usd":  round(cost_row or 0, 4),
+            "total_tokens":    tok_row or 0,
+        }
+
+    def export_jsonl(self, path: str, run_id: Optional[str] = None) -> int:
+        events = self.recent_events(limit=100_000, run_id=run_id)
+        with open(path, "w") as f:
+            for e in events:
+                f.write(json.dumps(e, default=str) + "\n")
+        return len(events)

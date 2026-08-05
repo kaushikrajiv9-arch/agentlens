@@ -12,13 +12,18 @@ class TraceEvent:
     action: str
     inputs: Any
     outputs: Any
-    status: str                  # "ok" | "error" | "blocked"
+    status: str                   # "ok" | "error" | "blocked"
     latency_ms: float
-    token_count: Optional[int]   = None
-    error: Optional[str]         = None
-    tags: dict                   = field(default_factory=dict)
-    event_id: str                = field(default_factory=lambda: str(uuid.uuid4()))
-    ts: str                      = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    token_count: Optional[int]    = None
+    input_tokens: Optional[int]   = None
+    output_tokens: Optional[int]  = None
+    cost_usd: Optional[float]     = None
+    model: Optional[str]          = None
+    run_id: Optional[str]         = None
+    error: Optional[str]          = None
+    tags: dict                    = field(default_factory=dict)
+    event_id: str                 = field(default_factory=lambda: str(uuid.uuid4()))
+    ts: str                       = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def to_dict(self) -> dict:
         return asdict(self)
