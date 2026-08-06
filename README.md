@@ -1,5 +1,9 @@
 # AgentLens
 
+[![PyPI](https://img.shields.io/pypi/v/llmsentinel)](https://pypi.org/project/llmsentinel/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/)
+
 **Audit trail, authorization, and anomaly detection for AI agents.**
 
 Every AI agent your company runs takes actions — reads files, sends emails, calls APIs, moves money. AgentLens makes every action observable, authorized, and auditable. One decorator. Zero infrastructure required to start.
@@ -124,12 +128,14 @@ agentlens.configure(db_path="/var/log/myapp/agentlens.db")
 
 ## Roadmap
 
-- [ ] Web dashboard (v0.2)
+- [x] Web dashboard (`agentlens serve` → http://localhost:7755)
+- [x] Multi-agent session tracking
+- [x] Anthropic + OpenAI drop-in integrations
+- [x] Token cost tracking (input/output USD)
 - [ ] EU AI Act compliance PDF export
 - [ ] OpenTelemetry exporter
 - [ ] Cloud sync (AgentLens Cloud)
 - [ ] Slack / PagerDuty / Discord integrations
-- [ ] Multi-agent session tracking
 
 ---
 
