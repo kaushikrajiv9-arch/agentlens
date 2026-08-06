@@ -5,7 +5,7 @@
 Every AI agent your company runs takes actions — reads files, sends emails, calls APIs, moves money. AgentLens makes every action observable, authorized, and auditable. One decorator. Zero infrastructure required to start.
 
 ```bash
-pip install agentlens
+pip install llmsentinel
 ```
 
 ---
